@@ -177,7 +177,6 @@ function resetStateForGame() {
   state.phase = "playing";
   state.score = 0;
   state.timeLeft = CONFIG.durationSeconds;
-  state.spawnClock = CONFIG.baseSpawnSeconds;
   state.elapsed = 0;
   state.flies.length = 0;
   state.particles.length = 0;
@@ -187,6 +186,8 @@ function resetStateForGame() {
   state.targetTipGap = CONFIG.tipOpenGap;
   state.nearestFlyDistance = Infinity;
   pointer.speed = 0;
+  spawnFly();
+  state.spawnClock = CONFIG.baseSpawnSeconds;
   updateHud();
 }
 
@@ -281,7 +282,6 @@ function spawnFly() {
     wingSeed: rand(0, Math.PI * 2),
     wobbleSpeed: rand(4.5, 9.8),
     mode: "approach",
-    hasEnteredScene: false,
     roamTargetX: targetX,
     roamTargetY: targetY,
     retargetClock: rand(1.1, 2.2),
@@ -443,33 +443,14 @@ function tryCatchFlies() {
   }
 }
 
-function handleFlyEscape(x, y) {
-  // Escaped flies no longer penalize or end the round.
-  emitBurst(x, y, "210,79,47", 12);
-}
-
 function updateFlies(dt) {
-  const width = state.viewport.width;
-  const height = state.viewport.height;
   const ramen = getRamenAnchor();
   const airCenterX = ramen.airCenterX;
   const airCenterY = ramen.airCenterY;
-  const escapeX = ramen.airRadiusX + 260;
-  const escapeY = ramen.airRadiusY + 220;
 
   for (let i = state.flies.length - 1; i >= 0; i -= 1) {
     const fly = state.flies[i];
     fly.age += dt;
-
-    if (
-      !fly.hasEnteredScene &&
-      fly.x > -8 &&
-      fly.x < width + 8 &&
-      fly.y > -8 &&
-      fly.y < height + 8
-    ) {
-      fly.hasEnteredScene = true;
-    }
 
     let desiredVX = fly.vx;
     let desiredVY = fly.vy;
@@ -574,23 +555,6 @@ function updateFlies(dt) {
     } else if (nextSpeed > maxSpeed) {
       fly.vx = (fly.vx / nextSpeed) * maxSpeed;
       fly.vy = (fly.vy / nextSpeed) * maxSpeed;
-    }
-
-    if (fly.hasEnteredScene) {
-      const airDx = fly.x - airCenterX;
-      const airDy = fly.y - airCenterY;
-      const outOfAirspace = Math.abs(airDx) > escapeX || Math.abs(airDy) > escapeY;
-      const outOfView =
-        fly.x < -150 ||
-        fly.x > width + 150 ||
-        fly.y < -170 ||
-        fly.y > height + 160;
-      const stayedTooLong = fly.age > 22;
-
-      if (outOfAirspace || outOfView || stayedTooLong) {
-        state.flies.splice(i, 1);
-        handleFlyEscape(fly.x, fly.y);
-      }
     }
   }
 }
