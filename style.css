@@ -1,11 +1,11 @@
 :root {
-  --ink: #f6edd4;
-  --paper: #d8c9a3;
-  --ember: #d24f2f;
-  --ember-dark: #8f2c1e;
-  --night: #11100c;
-  --shadow: #060503;
-  --jade: #5f8770;
+  --ink: #fff8e7;
+  --paper: #f3dfb4;
+  --ember: #e26c3f;
+  --ember-dark: #bf4f2e;
+  --night: #59402b;
+  --shadow: #2f2015;
+  --jade: #7da888;
 }
 
 * {
@@ -22,9 +22,9 @@ body {
   font-family: "Shippori Mincho", Georgia, serif;
   color: var(--ink);
   background:
-    radial-gradient(circle at 18% 15%, rgba(210, 79, 47, 0.24), transparent 34%),
-    radial-gradient(circle at 78% 80%, rgba(95, 135, 112, 0.22), transparent 36%),
-    linear-gradient(165deg, #1a1813, #0d0b08 60%, #050403);
+    radial-gradient(circle at 18% 15%, rgba(247, 146, 81, 0.34), transparent 34%),
+    radial-gradient(circle at 78% 80%, rgba(125, 168, 136, 0.28), transparent 36%),
+    linear-gradient(165deg, #efcea1, #ce9362 58%, #9d693f);
   overflow: hidden;
 }
 
@@ -33,17 +33,17 @@ body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  opacity: 0.22;
+  opacity: 0.15;
   background-image:
     repeating-linear-gradient(
       95deg,
       transparent 0 26px,
-      rgba(216, 201, 163, 0.06) 26px 28px
+      rgba(255, 242, 204, 0.16) 26px 28px
     ),
     repeating-linear-gradient(
       0deg,
       transparent 0 34px,
-      rgba(210, 79, 47, 0.05) 34px 35px
+      rgba(194, 96, 54, 0.12) 34px 35px
     );
 }
 
@@ -65,8 +65,8 @@ body::before {
   font-size: clamp(2.2rem, 6vw, 4.4rem);
   font-family: "Teko", sans-serif;
   text-shadow:
-    0 0 12px rgba(210, 79, 47, 0.45),
-    0 0 36px rgba(210, 79, 47, 0.2);
+    0 0 12px rgba(255, 165, 112, 0.65),
+    0 0 36px rgba(227, 111, 63, 0.36);
   animation: title-draw 0.85s ease-out 0.15s both;
 }
 
@@ -78,14 +78,14 @@ body::before {
 }
 
 .hud-card {
-  background: linear-gradient(145deg, rgba(19, 15, 12, 0.85), rgba(7, 6, 5, 0.82));
-  border: 1px solid rgba(216, 201, 163, 0.28);
+  background: linear-gradient(145deg, rgba(90, 57, 34, 0.72), rgba(64, 40, 24, 0.68));
+  border: 1px solid rgba(255, 226, 177, 0.46);
   border-radius: 10px;
   padding: 0.42rem 0.7rem 0.36rem;
   backdrop-filter: blur(1.5px);
   box-shadow:
-    inset 0 1px 0 rgba(246, 237, 212, 0.1),
-    0 12px 20px rgba(0, 0, 0, 0.25);
+    inset 0 1px 0 rgba(255, 247, 224, 0.34),
+    0 12px 20px rgba(71, 38, 18, 0.26);
   animation: card-rise 0.5s ease both;
 }
 
@@ -114,7 +114,7 @@ body::before {
   font-size: 0.74rem;
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  color: rgba(246, 237, 212, 0.78);
+  color: rgba(255, 244, 217, 0.9);
 }
 
 .value {
@@ -129,11 +129,11 @@ body::before {
   position: relative;
   border-radius: 16px;
   overflow: hidden;
-  border: 1px solid rgba(216, 201, 163, 0.32);
-  background: linear-gradient(185deg, rgba(15, 12, 10, 0.74), rgba(2, 2, 2, 0.8));
+  border: 1px solid rgba(255, 230, 183, 0.45);
+  background: linear-gradient(185deg, rgba(119, 75, 45, 0.48), rgba(76, 47, 29, 0.52));
   box-shadow:
-    0 24px 50px rgba(0, 0, 0, 0.44),
-    inset 0 1px 0 rgba(246, 237, 212, 0.1);
+    0 24px 50px rgba(68, 35, 15, 0.35),
+    inset 0 1px 0 rgba(255, 245, 214, 0.28);
 }
 
 #gameCanvas {
@@ -152,13 +152,13 @@ body::before {
   width: min(560px, calc(100% - 2rem));
   transform: translate(-50%, -50%) scale(0.95);
   text-align: center;
-  border: 1px solid rgba(216, 201, 163, 0.34);
+  border: 1px solid rgba(252, 225, 175, 0.48);
   border-radius: 14px;
   padding: 1.35rem 1.25rem;
-  background: linear-gradient(170deg, rgba(13, 11, 8, 0.9), rgba(31, 19, 14, 0.86));
+  background: linear-gradient(170deg, rgba(91, 55, 32, 0.9), rgba(122, 75, 46, 0.86));
   box-shadow:
-    0 20px 35px rgba(0, 0, 0, 0.44),
-    inset 0 1px 0 rgba(246, 237, 212, 0.12);
+    0 20px 35px rgba(65, 34, 15, 0.36),
+    inset 0 1px 0 rgba(255, 244, 219, 0.26);
   pointer-events: none;
   opacity: 0;
   transition:
@@ -184,7 +184,7 @@ body::before {
   margin: 0 auto 1rem;
   max-width: 34ch;
   line-height: 1.5;
-  color: rgba(246, 237, 212, 0.85);
+  color: rgba(255, 244, 218, 0.94);
 }
 
 button {
@@ -195,7 +195,7 @@ button {
   font-size: 1.25rem;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: #fff7e2;
+  color: #fff8e8;
   background: linear-gradient(160deg, var(--ember), var(--ember-dark));
   box-shadow:
     0 10px 22px rgba(210, 79, 47, 0.36),

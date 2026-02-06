@@ -17,7 +17,7 @@ const finalMessage = document.getElementById("finalMessage");
 
 const CONFIG = {
   durationSeconds: 60,
-  maxLives: 3,
+  maxLives: 4,
   chopstickLength: 138,
   chopstickHandleGap: 30,
   chopstickHandleWidth: 10.8,
@@ -25,34 +25,40 @@ const CONFIG = {
   tipOpenGap: 11,
   tipClosedGap: 1.2,
   tipCatchGapMax: 3.5,
-  tipCatchRadius: 5.8,
-  tipAutoCloseRange: 40,
-  tipSnapRange: 22,
+  tipCatchRadius: 7.1,
+  tipAutoCloseRange: 54,
+  tipSnapRange: 30,
   tipCloseSpeed: 18,
   tipOpenSpeed: 10,
-  baseSpawnSeconds: 0.74,
-  minSpawnSeconds: 0.24,
-  comboWindowSeconds: 1.28,
+  baseSpawnSeconds: 5,
+  minSpawnSeconds: 5,
+  comboWindowSeconds: 1.45,
+};
+
+const RAMEN = {
+  bowlRadiusX: 92,
+  bowlRadiusY: 22,
+  flyAirspaceScale: 5,
 };
 
 const FLY_TYPES = {
   normal: {
     points: 10,
-    speed: 175,
-    size: 12.5,
-    color: "205,194,166",
+    speed: 132,
+    size: 13.4,
+    color: "92,90,94",
   },
   swift: {
-    points: 16,
-    speed: 235,
-    size: 10.2,
-    color: "233,186,112",
+    points: 14,
+    speed: 168,
+    size: 11.6,
+    color: "98,96,100",
   },
   gold: {
-    points: 30,
-    speed: 198,
-    size: 11.8,
-    color: "247,205,93",
+    points: 24,
+    speed: 148,
+    size: 12.8,
+    color: "138,122,78",
   },
 };
 
@@ -75,7 +81,7 @@ const state = {
   timeLeft: CONFIG.durationSeconds,
   combo: 0,
   comboClock: 0,
-  spawnClock: 0.5,
+  spawnClock: CONFIG.baseSpawnSeconds,
   elapsed: 0,
   lastTimestamp: 0,
   lastAngle: -Math.PI * 0.24,
@@ -90,6 +96,7 @@ const state = {
   flies: [],
   particles: [],
   slashTrail: [],
+  scorePopups: [],
 };
 
 function loadBestScore() {
@@ -115,6 +122,27 @@ function clamp(value, min, max) {
 
 function rand(min, max) {
   return min + Math.random() * (max - min);
+}
+
+function getRamenAnchor() {
+  const width = state.viewport.width;
+  const height = state.viewport.height;
+  const tableTopY = height * 0.57;
+  const tableTopHeight = height * 0.12;
+  const bowlY = tableTopY + tableTopHeight * 0.56;
+  const ramenWidth = RAMEN.bowlRadiusX * 2;
+  const ramenHeight = RAMEN.bowlRadiusY * 2;
+
+  return {
+    x: width * 0.5,
+    y: bowlY,
+    tableTopY,
+    tableTopHeight,
+    airCenterX: width * 0.5,
+    airCenterY: bowlY - height * 0.2,
+    airRadiusX: (ramenWidth * RAMEN.flyAirspaceScale) * 0.5,
+    airRadiusY: (ramenHeight * RAMEN.flyAirspaceScale) * 0.5,
+  };
 }
 
 function resizeCanvas() {
@@ -164,11 +192,12 @@ function resetStateForGame() {
   state.timeLeft = CONFIG.durationSeconds;
   state.combo = 0;
   state.comboClock = 0;
-  state.spawnClock = 0.25;
+  state.spawnClock = CONFIG.baseSpawnSeconds;
   state.elapsed = 0;
   state.flies.length = 0;
   state.particles.length = 0;
   state.slashTrail.length = 0;
+  state.scorePopups.length = 0;
   state.tipGap = CONFIG.tipOpenGap;
   state.targetTipGap = CONFIG.tipOpenGap;
   state.nearestFlyDistance = Infinity;
@@ -208,8 +237,8 @@ function endGame(reason) {
 
 function chooseFlyType(difficulty) {
   const roll = Math.random();
-  const goldChance = 0.06 + difficulty * 0.06;
-  const swiftChance = 0.27 + difficulty * 0.2;
+  const goldChance = 0.09 + difficulty * 0.05;
+  const swiftChance = 0.18 + difficulty * 0.12;
 
   if (roll < goldChance) {
     return "gold";
@@ -223,42 +252,43 @@ function chooseFlyType(difficulty) {
 }
 
 function spawnFly() {
-  const difficulty = clamp(state.elapsed / 65, 0, 1);
+  const difficulty = clamp(state.elapsed / 180, 0, 1);
   const type = chooseFlyType(difficulty);
   const data = FLY_TYPES[type];
-  const speed = data.speed * rand(0.84, 1.18) * (1 + difficulty * 0.18);
-  const size = data.size * rand(0.9, 1.16);
-  const margin = 44;
-  const side = Math.floor(Math.random() * 4);
+  const speed = data.speed * rand(0.92, 1.1) * (1 + difficulty * 0.1);
+  const size = data.size * rand(0.92, 1.08);
+  const ramen = getRamenAnchor();
   const width = state.viewport.width;
   const height = state.viewport.height;
-
+  const margin = 96;
+  const side = Math.floor(Math.random() * 4);
   let x = 0;
   let y = 0;
-  let vx = 0;
-  let vy = 0;
 
   if (side === 0) {
     x = -margin;
-    y = rand(34, height - 34);
-    vx = speed;
-    vy = rand(-85, 85);
+    y = rand(28, height - 40);
   } else if (side === 1) {
     x = width + margin;
-    y = rand(34, height - 34);
-    vx = -speed;
-    vy = rand(-85, 85);
+    y = rand(28, height - 40);
   } else if (side === 2) {
-    x = rand(34, width - 34);
+    x = rand(24, width - 24);
     y = -margin;
-    vx = rand(-85, 85);
-    vy = speed;
   } else {
-    x = rand(34, width - 34);
+    x = rand(24, width - 24);
     y = height + margin;
-    vx = rand(-85, 85);
-    vy = -speed;
   }
+
+  const targetX = ramen.airCenterX + rand(-ramen.airRadiusX * 0.85, ramen.airRadiusX * 0.85);
+  const targetY = ramen.airCenterY + rand(-ramen.airRadiusY * 0.9, ramen.airRadiusY * 0.9);
+  const toTargetX = targetX - x;
+  const toTargetY = targetY - y;
+  const toTargetLength = Math.hypot(toTargetX, toTargetY) || 1;
+  const vx = (toTargetX / toTargetLength) * speed;
+  const vy = (toTargetY / toTargetLength) * speed;
+
+  const orbitRadius = rand(ramen.airRadiusX * 0.32, ramen.airRadiusX * 0.96);
+  const orbitDirection = Math.random() < 0.5 ? 1 : -1;
 
   state.flies.push({
     x,
@@ -273,6 +303,11 @@ function spawnFly() {
     age: 0,
     wingSeed: rand(0, Math.PI * 2),
     wobbleSpeed: rand(4.5, 9.8),
+    orbitRadius,
+    orbitDirection,
+    orbitPhase: rand(0, Math.PI * 2),
+    mode: "approach",
+    hasEnteredScene: false,
   });
 }
 
@@ -310,6 +345,23 @@ function addTrailPoint(x, y, intensity) {
   }
 }
 
+function addScorePopup(text, x, y, color) {
+  state.scorePopups.push({
+    text,
+    x,
+    y,
+    vx: rand(-14, 14),
+    vy: rand(-72, -56),
+    life: 0.82,
+    maxLife: 0.82,
+    color,
+  });
+
+  if (state.scorePopups.length > 60) {
+    state.scorePopups.splice(0, state.scorePopups.length - 60);
+  }
+}
+
 function getChopstickPairGeometry() {
   const angle = state.lastAngle;
   const dirX = Math.cos(angle);
@@ -327,6 +379,10 @@ function getChopstickPairGeometry() {
   return {
     tipCenterX,
     tipCenterY,
+    handleCenterX,
+    handleCenterY,
+    midX: (tipCenterX + handleCenterX) * 0.5,
+    midY: (tipCenterY + handleCenterY) * 0.5,
     angle,
     top: {
       x1: handleCenterX + normalX * handleHalfGap,
@@ -377,12 +433,20 @@ function scoreCaughtFly(fly) {
   state.combo += 1;
   state.comboClock = CONFIG.comboWindowSeconds;
   const multiplier = 1 + Math.floor((state.combo - 1) / 4);
-  state.score += fly.points * multiplier;
+  const gained = fly.points * multiplier;
+  state.score += gained;
   emitBurst(
     fly.x,
     fly.y,
     fly.type === "gold" ? "247,205,93" : "228,213,174",
     fly.type === "gold" ? 24 : 16,
+  );
+  const pair = getChopstickPairGeometry();
+  addScorePopup(
+    "+" + String(gained),
+    pair.tipCenterX + rand(-6, 6),
+    pair.tipCenterY - 14,
+    fly.type === "gold" ? "255,213,103" : "255,241,209",
   );
 
   if (state.combo > 0 && state.combo % 5 === 0) {
@@ -422,26 +486,99 @@ function handleFlyEscape(x, y) {
 function updateFlies(dt) {
   const width = state.viewport.width;
   const height = state.viewport.height;
-  const exitPadding = 80;
+  const ramen = getRamenAnchor();
+  const airCenterX = ramen.airCenterX;
+  const airCenterY = ramen.airCenterY;
+  const escapeX = ramen.airRadiusX + 260;
+  const escapeY = ramen.airRadiusY + 220;
 
   for (let i = state.flies.length - 1; i >= 0; i -= 1) {
     const fly = state.flies[i];
     fly.age += dt;
 
-    const wobble = Math.sin(fly.age * fly.wobbleSpeed + fly.wingSeed) * 22;
+    if (
+      !fly.hasEnteredScene &&
+      fly.x > -8 &&
+      fly.x < width + 8 &&
+      fly.y > -8 &&
+      fly.y < height + 8
+    ) {
+      fly.hasEnteredScene = true;
+    }
+
+    const toCenterX = airCenterX - fly.x;
+    const toCenterY = airCenterY - fly.y;
+    const centerDistance = Math.hypot(toCenterX, toCenterY) || 1;
+
+    if (fly.mode === "approach" && centerDistance <= fly.orbitRadius * 0.72) {
+      fly.mode = "orbit";
+    }
+
+    let desiredVX = fly.vx;
+    let desiredVY = fly.vy;
+
+    if (fly.mode === "approach") {
+      const dirX = toCenterX / centerDistance;
+      const dirY = toCenterY / centerDistance;
+      desiredVX = dirX * fly.baseSpeed + Math.sin(fly.age * 4.1 + fly.wingSeed) * 18;
+      desiredVY = dirY * fly.baseSpeed + Math.cos(fly.age * 3.8 + fly.wingSeed) * 18;
+    } else {
+      const centerDirX = toCenterX / centerDistance;
+      const centerDirY = toCenterY / centerDistance;
+      const tangentX = -centerDirY * fly.orbitDirection;
+      const tangentY = centerDirX * fly.orbitDirection;
+      const pulse = Math.sin(fly.age * 1.05 + fly.orbitPhase) * 0.18;
+      const targetRadius = fly.orbitRadius * (1 + pulse);
+      const radialError = centerDistance - targetRadius;
+      const orbitalSpeed =
+        fly.baseSpeed * (0.86 + Math.sin(fly.age * 1.6 + fly.orbitPhase) * 0.1);
+
+      desiredVX = tangentX * orbitalSpeed - centerDirX * radialError * 2.1;
+      desiredVY = tangentY * (orbitalSpeed * 0.78) - centerDirY * radialError * 2.35;
+
+      if (fly.y > ramen.y - fly.size * 0.5) {
+        desiredVY -= 120;
+      }
+    }
+
+    let separationX = 0;
+    let separationY = 0;
+    for (let j = 0; j < state.flies.length; j += 1) {
+      if (j === i) {
+        continue;
+      }
+
+      const other = state.flies[j];
+      const dx = fly.x - other.x;
+      const dy = fly.y - other.y;
+      const distance = Math.hypot(dx, dy) || 1;
+      if (distance < 44) {
+        const repel = ((44 - distance) / 44) * 160;
+        separationX += (dx / distance) * repel;
+        separationY += (dy / distance) * repel * 0.86;
+      }
+    }
+
+    desiredVX += separationX;
+    desiredVY += separationY;
+
+    const steering = clamp(dt * (fly.mode === "approach" ? 2.4 : 3.15), 0, 1);
+    fly.vx += (desiredVX - fly.vx) * steering;
+    fly.vy += (desiredVY - fly.vy) * steering;
+
+    const wobble = Math.sin(fly.age * fly.wobbleSpeed + fly.wingSeed) * (fly.mode === "approach" ? 6 : 8);
     const speed = Math.hypot(fly.vx, fly.vy) || 1;
     const normalX = -fly.vy / speed;
     const normalY = fly.vx / speed;
-
     fly.x += (fly.vx + normalX * wobble) * dt;
     fly.y += (fly.vy + normalY * wobble) * dt;
 
-    fly.vx += rand(-22, 22) * dt;
-    fly.vy += rand(-22, 22) * dt;
+    fly.vx += rand(-6, 6) * dt;
+    fly.vy += rand(-6, 6) * dt;
 
     const nextSpeed = Math.hypot(fly.vx, fly.vy) || 1;
-    const minSpeed = fly.baseSpeed * 0.76;
-    const maxSpeed = fly.baseSpeed * 1.34;
+    const minSpeed = fly.baseSpeed * 0.62;
+    const maxSpeed = fly.baseSpeed * 1.25;
 
     if (nextSpeed < minSpeed) {
       fly.vx = (fly.vx / nextSpeed) * minSpeed;
@@ -451,14 +588,21 @@ function updateFlies(dt) {
       fly.vy = (fly.vy / nextSpeed) * maxSpeed;
     }
 
-    if (
-      fly.x < -exitPadding ||
-      fly.x > width + exitPadding ||
-      fly.y < -exitPadding ||
-      fly.y > height + exitPadding
-    ) {
-      state.flies.splice(i, 1);
-      handleFlyEscape(fly.x, fly.y);
+    if (fly.hasEnteredScene) {
+      const airDx = fly.x - airCenterX;
+      const airDy = fly.y - airCenterY;
+      const outOfAirspace = Math.abs(airDx) > escapeX || Math.abs(airDy) > escapeY;
+      const outOfView =
+        fly.x < -150 ||
+        fly.x > width + 150 ||
+        fly.y < -170 ||
+        fly.y > height + 160;
+      const stayedTooLong = fly.age > 22;
+
+      if (outOfAirspace || outOfView || stayedTooLong) {
+        state.flies.splice(i, 1);
+        handleFlyEscape(fly.x, fly.y);
+      }
     }
   }
 }
@@ -482,6 +626,19 @@ function updateParticlesAndTrail(dt) {
     point.life -= dt * 2.8;
     if (point.life <= 0) {
       state.slashTrail.splice(i, 1);
+    }
+  }
+
+  for (let i = state.scorePopups.length - 1; i >= 0; i -= 1) {
+    const popup = state.scorePopups[i];
+    popup.life -= dt;
+    popup.x += popup.vx * dt;
+    popup.y += popup.vy * dt;
+    popup.vx *= 1 - dt * 1.9;
+    popup.vy += 36 * dt;
+
+    if (popup.life <= 0) {
+      state.scorePopups.splice(i, 1);
     }
   }
 }
@@ -524,18 +681,11 @@ function updateGame(dt) {
     }
   }
 
-  const difficulty = clamp(state.elapsed / 70, 0, 1);
-  const spawnRate =
-    CONFIG.baseSpawnSeconds -
-    (CONFIG.baseSpawnSeconds - CONFIG.minSpawnSeconds) * difficulty;
   state.spawnClock -= dt;
 
-  if (state.spawnClock <= 0) {
+  while (state.spawnClock <= 0) {
     spawnFly();
-    if (difficulty > 0.5 && Math.random() < 0.18) {
-      spawnFly();
-    }
-    state.spawnClock = spawnRate * rand(0.74, 1.24);
+    state.spawnClock += CONFIG.baseSpawnSeconds;
   }
 
   updateFlies(dt);
@@ -546,22 +696,22 @@ function updateGame(dt) {
 
 function drawBackdrop(width, height) {
   const wallGradient = ctx.createLinearGradient(0, 0, 0, height);
-  wallGradient.addColorStop(0, "#2a1d15");
-  wallGradient.addColorStop(0.52, "#1f140d");
-  wallGradient.addColorStop(1, "#140d08");
+  wallGradient.addColorStop(0, "#d8b485");
+  wallGradient.addColorStop(0.58, "#b67f50");
+  wallGradient.addColorStop(1, "#8f5f39");
   ctx.fillStyle = wallGradient;
   ctx.fillRect(0, 0, width, height);
 
   const ceilingHeight = height * 0.12;
   const ceilingGradient = ctx.createLinearGradient(0, 0, 0, ceilingHeight);
-  ceilingGradient.addColorStop(0, "rgba(62,42,28,0.95)");
-  ceilingGradient.addColorStop(1, "rgba(26,16,10,0.94)");
+  ceilingGradient.addColorStop(0, "rgba(232,199,150,0.98)");
+  ceilingGradient.addColorStop(1, "rgba(177,121,77,0.95)");
   ctx.fillStyle = ceilingGradient;
   ctx.fillRect(0, 0, width, ceilingHeight);
 
   for (let i = 0; i < 7; i += 1) {
     const x = (i / 6) * width;
-    ctx.strokeStyle = "rgba(115,76,51,0.34)";
+    ctx.strokeStyle = "rgba(123,78,45,0.45)";
     ctx.lineWidth = 6;
     ctx.beginPath();
     ctx.moveTo(x, 0);
@@ -580,16 +730,16 @@ function drawBackdrop(width, height) {
   for (let i = 0; i < panelCount; i += 1) {
     const x = panelStartX + i * (panelWidth + panelGap);
     const paperGlow = ctx.createLinearGradient(0, panelY, 0, panelY + panelHeight);
-    paperGlow.addColorStop(0, "rgba(240,224,186,0.32)");
-    paperGlow.addColorStop(1, "rgba(200,170,122,0.2)");
+    paperGlow.addColorStop(0, "rgba(255,241,205,0.72)");
+    paperGlow.addColorStop(1, "rgba(239,212,157,0.56)");
     ctx.fillStyle = paperGlow;
     ctx.fillRect(x, panelY, panelWidth, panelHeight);
 
-    ctx.strokeStyle = "rgba(102,67,44,0.9)";
+    ctx.strokeStyle = "rgba(116,70,40,0.9)";
     ctx.lineWidth = 4;
     ctx.strokeRect(x, panelY, panelWidth, panelHeight);
 
-    ctx.strokeStyle = "rgba(136,94,64,0.44)";
+    ctx.strokeStyle = "rgba(152,102,67,0.46)";
     ctx.lineWidth = 1;
     for (let c = 1; c <= 3; c += 1) {
       const px = x + (panelWidth * c) / 4;
@@ -609,7 +759,7 @@ function drawBackdrop(width, height) {
 
   const curtainY = panelY + panelHeight + height * 0.02;
   const curtainHeight = height * 0.11;
-  ctx.fillStyle = "rgba(52,25,20,0.9)";
+  ctx.fillStyle = "rgba(143,52,40,0.9)";
   ctx.fillRect(width * 0.08, curtainY, width * 0.84, curtainHeight);
 
   const drapeCount = 6;
@@ -617,7 +767,7 @@ function drawBackdrop(width, height) {
   for (let i = 0; i < drapeCount; i += 1) {
     const x = width * 0.08 + i * drapeWidth;
     const wobble = Math.sin(state.elapsed * 1.2 + i * 0.6) * 4;
-    ctx.fillStyle = "rgba(75,33,27,0.84)";
+    ctx.fillStyle = "rgba(170,66,52,0.78)";
     ctx.beginPath();
     ctx.moveTo(x, curtainY);
     ctx.lineTo(x + drapeWidth, curtainY);
@@ -632,17 +782,17 @@ function drawBackdrop(width, height) {
     const lx = width * lanternXs[i] + Math.sin(state.elapsed * 1.3 + i) * 3;
     const ly = height * 0.17 + Math.cos(state.elapsed * 1.1 + i) * 2;
     const glow = ctx.createRadialGradient(lx, ly, 8, lx, ly, 52);
-    glow.addColorStop(0, "rgba(255,210,130,0.34)");
+    glow.addColorStop(0, "rgba(255,230,162,0.56)");
     glow.addColorStop(1, "rgba(255,180,86,0)");
     ctx.fillStyle = glow;
     ctx.fillRect(lx - 55, ly - 55, 110, 110);
 
-    ctx.fillStyle = "rgba(190,58,32,0.9)";
+    ctx.fillStyle = "rgba(221,85,52,0.92)";
     ctx.beginPath();
     ctx.ellipse(lx, ly, 17, 23, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.strokeStyle = "rgba(250,196,135,0.42)";
+    ctx.strokeStyle = "rgba(255,229,176,0.55)";
     ctx.lineWidth = 1;
     for (let b = -2; b <= 2; b += 1) {
       ctx.beginPath();
@@ -651,10 +801,10 @@ function drawBackdrop(width, height) {
       ctx.stroke();
     }
 
-    ctx.fillStyle = "rgba(70,43,28,0.9)";
+    ctx.fillStyle = "rgba(121,76,43,0.9)";
     ctx.fillRect(lx - 5, ly - 28, 10, 4);
     ctx.fillRect(lx - 5, ly + 24, 10, 4);
-    ctx.strokeStyle = "rgba(110,82,62,0.7)";
+    ctx.strokeStyle = "rgba(136,98,67,0.84)";
     ctx.lineWidth = 1.1;
     ctx.beginPath();
     ctx.moveTo(lx, 0);
@@ -662,74 +812,138 @@ function drawBackdrop(width, height) {
     ctx.stroke();
   }
 
-  const counterTopY = height * 0.67;
-  const counterTopHeight = height * 0.06;
+  const ramen = getRamenAnchor();
+  const counterTopY = ramen.tableTopY;
+  const counterTopHeight = ramen.tableTopHeight;
   const counterFrontHeight = height - counterTopY;
 
-  const topGradient = ctx.createLinearGradient(0, counterTopY, 0, counterTopY + counterTopHeight);
-  topGradient.addColorStop(0, "#94653f");
-  topGradient.addColorStop(1, "#5a3821");
+  const topGradient = ctx.createLinearGradient(
+    0,
+    counterTopY,
+    0,
+    counterTopY + counterTopHeight,
+  );
+  topGradient.addColorStop(0, "#e7bb84");
+  topGradient.addColorStop(1, "#b57b4a");
   ctx.fillStyle = topGradient;
   ctx.fillRect(0, counterTopY, width, counterTopHeight);
 
-  const frontGradient = ctx.createLinearGradient(0, counterTopY + counterTopHeight, 0, height);
-  frontGradient.addColorStop(0, "#432716");
-  frontGradient.addColorStop(1, "#22120b");
+  const frontGradient = ctx.createLinearGradient(
+    0,
+    counterTopY + counterTopHeight,
+    0,
+    height,
+  );
+  frontGradient.addColorStop(0, "#a76b3d");
+  frontGradient.addColorStop(1, "#744629");
   ctx.fillStyle = frontGradient;
   ctx.fillRect(0, counterTopY + counterTopHeight, width, counterFrontHeight);
 
+  const tableGlow = ctx.createRadialGradient(
+    ramen.x,
+    counterTopY + counterTopHeight * 0.5,
+    36,
+    ramen.x,
+    counterTopY + counterTopHeight * 0.5,
+    width * 0.48,
+  );
+  tableGlow.addColorStop(0, "rgba(255,220,166,0.38)");
+  tableGlow.addColorStop(1, "rgba(255,220,166,0)");
+  ctx.fillStyle = tableGlow;
+  ctx.fillRect(0, counterTopY, width, counterTopHeight);
+
   for (let i = 0; i < 22; i += 1) {
     const y = counterTopY + counterTopHeight + i * (counterFrontHeight / 22);
-    ctx.strokeStyle = "rgba(150,102,68," + (0.08 + i * 0.004) + ")";
+    ctx.strokeStyle = "rgba(209,156,108," + (0.1 + i * 0.004) + ")";
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(width, y);
     ctx.stroke();
   }
+}
 
-  const plateCount = 5;
-  for (let i = 0; i < plateCount; i += 1) {
-    const x = width * (0.16 + i * 0.16);
-    const y = counterTopY + counterTopHeight * 0.56;
-    ctx.fillStyle = "rgba(28,34,38,0.85)";
-    ctx.beginPath();
-    ctx.ellipse(x, y, 20, 8, 0, 0, Math.PI * 2);
-    ctx.fill();
+function drawRamenBowl() {
+  const ramen = getRamenAnchor();
+  const x = ramen.x;
+  const y = ramen.y;
 
-    ctx.fillStyle = i % 2 === 0 ? "rgba(241,145,104,0.72)" : "rgba(227,210,162,0.75)";
-    ctx.beginPath();
-    ctx.ellipse(x, y - 2, 14, 4, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  ctx.fillStyle = "rgba(84,58,39,0.4)";
+  ctx.beginPath();
+  ctx.ellipse(x, y + 28, 108, 22, 0, 0, Math.PI * 2);
+  ctx.fill();
 
-  const stoolCount = Math.max(4, Math.floor(width / 180));
-  for (let i = 0; i < stoolCount; i += 1) {
-    const x = width * ((i + 0.6) / (stoolCount + 0.2));
-    const seatY = counterTopY + counterTopHeight + height * 0.2;
-    ctx.fillStyle = "rgba(28,19,12,0.9)";
-    ctx.beginPath();
-    ctx.ellipse(x, seatY, 28, 8, 0, 0, Math.PI * 2);
-    ctx.fill();
+  const bowlBody = ctx.createLinearGradient(0, y - 24, 0, y + 34);
+  bowlBody.addColorStop(0, "#f2f3f7");
+  bowlBody.addColorStop(1, "#cfdae9");
+  ctx.fillStyle = bowlBody;
+  ctx.beginPath();
+  ctx.moveTo(x - 92, y - 8);
+  ctx.quadraticCurveTo(x - 78, y + 34, x - 48, y + 38);
+  ctx.lineTo(x + 48, y + 38);
+  ctx.quadraticCurveTo(x + 78, y + 34, x + 92, y - 8);
+  ctx.closePath();
+  ctx.fill();
 
-    ctx.strokeStyle = "rgba(66,45,30,0.95)";
-    ctx.lineWidth = 4;
+  ctx.strokeStyle = "rgba(93,110,136,0.7)";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.ellipse(x, y - 8, 92, 22, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  const broth = ctx.createLinearGradient(0, y - 20, 0, y + 8);
+  broth.addColorStop(0, "#f8c879");
+  broth.addColorStop(1, "#e59a4d");
+  ctx.fillStyle = broth;
+  ctx.beginPath();
+  ctx.ellipse(x, y - 8, 84, 16, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(247,213,132,0.95)";
+  ctx.lineWidth = 2;
+  for (let i = 0; i < 10; i += 1) {
+    const nx = x - 62 + i * 14 + Math.sin(state.elapsed * 1.2 + i) * 2;
     ctx.beginPath();
-    ctx.moveTo(x - 16, seatY + 4);
-    ctx.lineTo(x - 16, seatY + 28);
-    ctx.moveTo(x + 16, seatY + 4);
-    ctx.lineTo(x + 16, seatY + 28);
+    ctx.arc(nx, y - 9 + Math.sin(i * 0.6) * 2, 10 + (i % 3), Math.PI * 0.15, Math.PI * 0.9);
     ctx.stroke();
   }
 
+  ctx.fillStyle = "rgba(52,74,45,0.9)";
+  ctx.beginPath();
+  ctx.ellipse(x - 30, y - 13, 16, 10, -0.35, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "rgba(142,73,55,0.92)";
+  ctx.beginPath();
+  ctx.ellipse(x + 28, y - 9, 16, 10, 0.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "rgba(245,239,224,0.95)";
+  ctx.beginPath();
+  ctx.ellipse(x + 2, y - 10, 13, 9, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(239,166,96,0.95)";
+  ctx.beginPath();
+  ctx.ellipse(x + 2, y - 10, 4.5, 3.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "rgba(94,153,76,0.95)";
+  for (let i = 0; i < 9; i += 1) {
+    const gx = x - 20 + i * 6 + Math.sin(i) * 2;
+    const gy = y - 14 + (i % 3) * 3;
+    ctx.beginPath();
+    ctx.arc(gx, gy, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   for (let i = 0; i < 5; i += 1) {
-    const sx = width * (0.12 + i * 0.16);
-    const sy = counterTopY + counterTopHeight - 5;
-    ctx.strokeStyle = "rgba(238,227,206,0.14)";
-    ctx.lineWidth = 1.2;
+    const sx = x - 34 + i * 18 + Math.sin(state.elapsed * 0.9 + i) * 2;
+    const sy = y - 28 - i * 2;
+    ctx.strokeStyle = "rgba(255,247,232,0.52)";
+    ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(sx, sy);
-    ctx.bezierCurveTo(sx - 7, sy - 22, sx + 8, sy - 28, sx + 2, sy - 44);
+    ctx.bezierCurveTo(sx - 5, sy - 18, sx + 8, sy - 28, sx + 2, sy - 44);
     ctx.stroke();
   }
 }
@@ -738,45 +952,79 @@ function drawFlies() {
   for (let i = 0; i < state.flies.length; i += 1) {
     const fly = state.flies[i];
     const angle = Math.atan2(fly.vy, fly.vx);
-    const flap = Math.sin(state.elapsed * 36 + fly.wingSeed) * 0.55;
-    const wingOffset = 4 + flap * 2.8;
+    const flap = Math.sin(state.elapsed * 48 + fly.wingSeed) * 0.68;
+    const wingSpread = 3 + flap * 2.7;
+    const isGold = fly.type === "gold";
+    const abdomenTone = isGold ? "126,111,72" : fly.color;
 
     ctx.save();
     ctx.translate(fly.x, fly.y);
     ctx.rotate(angle);
 
-    ctx.fillStyle = "rgba(230,230,220,0.42)";
+    ctx.fillStyle = "rgba(244,246,250,0.5)";
     ctx.beginPath();
-    ctx.ellipse(-1, -wingOffset, fly.size * 0.62, fly.size * 0.28, 0.22, 0, Math.PI * 2);
+    ctx.ellipse(-3.8, -wingSpread, fly.size * 0.92, fly.size * 0.36, 0.25, 0, Math.PI * 2);
     ctx.fill();
     ctx.beginPath();
-    ctx.ellipse(-1, wingOffset, fly.size * 0.62, fly.size * 0.28, -0.22, 0, Math.PI * 2);
+    ctx.ellipse(-3.8, wingSpread, fly.size * 0.92, fly.size * 0.36, -0.25, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "rgba(" + fly.color + ",1)";
+    ctx.strokeStyle = "rgba(150,160,175,0.38)";
+    ctx.lineWidth = 1;
+    for (let w = -1; w <= 1; w += 1) {
+      ctx.beginPath();
+      ctx.moveTo(-8, w * wingSpread);
+      ctx.lineTo(fly.size * 0.5, w * wingSpread + w * 3.2);
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle = "rgba(34,30,28,0.82)";
+    ctx.lineWidth = 1.1;
+    for (let leg = -1; leg <= 1; leg += 1) {
+      ctx.beginPath();
+      ctx.moveTo(-1.5, leg * 1.8);
+      ctx.lineTo(-fly.size * 0.72, leg * 3.7 + (leg === 0 ? 5 : 1.5));
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = "rgba(" + abdomenTone + ",0.96)";
     ctx.beginPath();
-    ctx.ellipse(0, 0, fly.size * 0.8, fly.size * 0.45, 0, 0, Math.PI * 2);
+    ctx.ellipse(-1.5, 0, fly.size * 0.72, fly.size * 0.45, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "rgba(40,24,18,0.95)";
+    ctx.strokeStyle = "rgba(40,36,34,0.6)";
+    ctx.lineWidth = 1;
+    for (let s = 0; s < 4; s += 1) {
+      const sx = -fly.size * 0.55 + s * (fly.size * 0.34);
+      ctx.beginPath();
+      ctx.moveTo(sx, -fly.size * 0.34);
+      ctx.lineTo(sx + 1.3, fly.size * 0.34);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = "rgba(66,62,64,0.98)";
     ctx.beginPath();
-    ctx.arc(fly.size * 0.5, 0, fly.size * 0.28, 0, Math.PI * 2);
+    ctx.ellipse(fly.size * 0.28, 0, fly.size * 0.52, fly.size * 0.42, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.strokeStyle = "rgba(30,24,20,0.72)";
-    ctx.lineWidth = 1.2;
+    ctx.fillStyle = "rgba(44,42,44,1)";
     ctx.beginPath();
-    ctx.moveTo(-fly.size * 0.55, 0);
-    ctx.lineTo(-fly.size * 0.9, -fly.size * 0.4);
-    ctx.moveTo(-fly.size * 0.55, 0);
-    ctx.lineTo(-fly.size * 0.9, fly.size * 0.4);
-    ctx.stroke();
+    ctx.arc(fly.size * 0.8, 0, fly.size * 0.3, 0, Math.PI * 2);
+    ctx.fill();
 
-    if (fly.type === "gold") {
-      ctx.strokeStyle = "rgba(247,205,93,0.55)";
+    ctx.fillStyle = "rgba(178,48,43,0.95)";
+    ctx.beginPath();
+    ctx.ellipse(fly.size * 0.87, -fly.size * 0.14, fly.size * 0.14, fly.size * 0.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(fly.size * 0.87, fly.size * 0.14, fly.size * 0.14, fly.size * 0.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (isGold) {
+      ctx.strokeStyle = "rgba(255,215,118,0.58)";
       ctx.lineWidth = 1.3;
       ctx.beginPath();
-      ctx.arc(0, 0, fly.size * 1.05 + Math.sin(state.elapsed * 8 + i) * 0.7, 0, Math.PI * 2);
+      ctx.arc(0, 0, fly.size * 1.02 + Math.sin(state.elapsed * 8 + i) * 0.65, 0, Math.PI * 2);
       ctx.stroke();
     }
 
@@ -810,6 +1058,22 @@ function drawParticles() {
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.size * (0.55 + alpha * 0.75), 0, Math.PI * 2);
     ctx.fill();
+  }
+}
+
+function drawScorePopups() {
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  for (let i = 0; i < state.scorePopups.length; i += 1) {
+    const popup = state.scorePopups[i];
+    const alpha = clamp(popup.life / popup.maxLife, 0, 1);
+    const scale = 0.92 + (1 - alpha) * 0.34;
+    ctx.font = "600 " + Math.round(20 * scale) + "px Teko, sans-serif";
+    ctx.lineWidth = 3.2;
+    ctx.strokeStyle = "rgba(52,24,18," + alpha * 0.62 + ")";
+    ctx.fillStyle = "rgba(" + popup.color + "," + alpha * 0.98 + ")";
+    ctx.strokeText(popup.text, popup.x, popup.y);
+    ctx.fillText(popup.text, popup.x, popup.y);
   }
 }
 
@@ -918,21 +1182,24 @@ function drawCaptureAura() {
 }
 
 function drawCursorHalo() {
+  const pair = getChopstickPairGeometry();
+  const cursorX = pair.midX;
+  const cursorY = pair.midY;
   const radius = 13 + state.cursorGlow * 16;
   const alpha = pointer.active ? 0.28 : 0.16;
 
   ctx.strokeStyle = "rgba(246,237,212," + alpha + ")";
   ctx.lineWidth = 1.2;
   ctx.beginPath();
-  ctx.arc(pointer.x, pointer.y, radius, 0, Math.PI * 2);
+  ctx.arc(cursorX, cursorY, radius, 0, Math.PI * 2);
   ctx.stroke();
 
   if (pointer.active && pointer.speed > 180) {
-    const angle = state.lastAngle;
+    const angle = pair.angle;
     ctx.strokeStyle = "rgba(210,79,47,0.45)";
     ctx.lineWidth = 1.4;
     ctx.beginPath();
-    ctx.arc(pointer.x, pointer.y, radius + 6, angle - 0.6, angle + 0.6);
+    ctx.arc(cursorX, cursorY, radius + 6, angle - 0.6, angle + 0.6);
     ctx.stroke();
   }
 }
@@ -943,11 +1210,13 @@ function render() {
 
   ctx.clearRect(0, 0, width, height);
   drawBackdrop(width, height);
+  drawRamenBowl();
   drawTrail();
   drawFlies();
   drawParticles();
   drawCaptureAura();
   drawChopsticks();
+  drawScorePopups();
   drawCursorHalo();
 }
 
