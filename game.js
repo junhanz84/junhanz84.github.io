@@ -4,9 +4,7 @@ const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
 const scoreValue = document.getElementById("scoreValue");
-const bestValue = document.getElementById("bestValue");
 const timeValue = document.getElementById("timeValue");
-const comboValue = document.getElementById("comboValue");
 
 const introOverlay = document.getElementById("introOverlay");
 const gameOverOverlay = document.getElementById("gameOverOverlay");
@@ -28,9 +26,7 @@ const CONFIG = {
   tipSnapRange: 30,
   tipCloseSpeed: 18,
   tipOpenSpeed: 10,
-  baseSpawnSeconds: 5,
-  minSpawnSeconds: 5,
-  comboWindowSeconds: 1.45,
+  baseSpawnSeconds: 3,
 };
 
 const RAMEN = {
@@ -74,10 +70,7 @@ const pointer = {
 const state = {
   phase: "ready",
   score: 0,
-  best: loadBestScore(),
   timeLeft: CONFIG.durationSeconds,
-  combo: 0,
-  comboClock: 0,
   spawnClock: CONFIG.baseSpawnSeconds,
   elapsed: 0,
   lastTimestamp: 0,
@@ -95,23 +88,6 @@ const state = {
   slashTrail: [],
   scorePopups: [],
 };
-
-function loadBestScore() {
-  try {
-    const raw = localStorage.getItem("chopstickNinjaBest");
-    return raw ? Math.max(0, Number(raw) || 0) : 0;
-  } catch {
-    return 0;
-  }
-}
-
-function saveBestScore(value) {
-  try {
-    localStorage.setItem("chopstickNinjaBest", String(Math.floor(value)));
-  } catch {
-    // Local storage may not be available in some browsing modes.
-  }
-}
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -185,11 +161,8 @@ function resizeCanvas() {
 }
 
 function updateHud() {
-  const comboMultiplier = 1 + Math.floor(Math.max(0, state.combo - 1) / 4);
   scoreValue.textContent = String(Math.floor(state.score));
-  bestValue.textContent = String(Math.floor(state.best));
   timeValue.textContent = String(Math.max(0, Math.ceil(state.timeLeft)));
-  comboValue.textContent = "x" + String(comboMultiplier);
 }
 
 function showOverlay(overlay) {
@@ -204,8 +177,6 @@ function resetStateForGame() {
   state.phase = "playing";
   state.score = 0;
   state.timeLeft = CONFIG.durationSeconds;
-  state.combo = 0;
-  state.comboClock = 0;
   state.spawnClock = CONFIG.baseSpawnSeconds;
   state.elapsed = 0;
   state.flies.length = 0;
@@ -233,18 +204,12 @@ function endGame(reason) {
   }
 
   state.phase = "gameover";
-  if (state.score > state.best) {
-    state.best = state.score;
-    saveBestScore(state.best);
-  }
   updateHud();
 
   finalMessage.textContent =
     reason +
     " You scored " +
     Math.floor(state.score) +
-    " points. Best: " +
-    Math.floor(state.best) +
     ".";
   showOverlay(gameOverOverlay);
 }
@@ -442,10 +407,7 @@ function updateTipGap(dt) {
 }
 
 function scoreCaughtFly(fly) {
-  state.combo += 1;
-  state.comboClock = CONFIG.comboWindowSeconds;
-  const multiplier = 1 + Math.floor((state.combo - 1) / 4);
-  const gained = fly.points * multiplier;
+  const gained = fly.points;
   state.score += gained;
   emitBurst(
     fly.x,
@@ -460,10 +422,6 @@ function scoreCaughtFly(fly) {
     pair.tipCenterY - 14,
     fly.type === "gold" ? "255,213,103" : "255,241,209",
   );
-
-  if (state.combo > 0 && state.combo % 5 === 0) {
-    emitBurst(fly.x, fly.y, "210,79,47", 18);
-  }
 }
 
 function tryCatchFlies() {
@@ -702,13 +660,6 @@ function updateGame(dt) {
     state.timeLeft = 0;
     endGame("Time is up.");
     return;
-  }
-
-  if (state.comboClock > 0) {
-    state.comboClock -= dt;
-    if (state.comboClock <= 0) {
-      state.combo = 0;
-    }
   }
 
   state.spawnClock -= dt;
@@ -1091,8 +1042,8 @@ function drawScorePopups() {
     const popup = state.scorePopups[i];
     const alpha = clamp(popup.life / popup.maxLife, 0, 1);
     const scale = 0.92 + (1 - alpha) * 0.34;
-    ctx.font = "600 " + Math.round(20 * scale) + "px Teko, sans-serif";
-    ctx.lineWidth = 3.2;
+    ctx.font = "600 " + Math.round(60 * scale) + "px Teko, sans-serif";
+    ctx.lineWidth = 9.6;
     ctx.strokeStyle = "rgba(52,24,18," + alpha * 0.62 + ")";
     ctx.fillStyle = "rgba(" + popup.color + "," + alpha * 0.98 + ")";
     ctx.strokeText(popup.text, popup.x, popup.y);
