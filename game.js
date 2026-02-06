@@ -16,7 +16,6 @@ const finalMessage = document.getElementById("finalMessage");
 
 const CONFIG = {
   durationSeconds: 60,
-  maxLives: 4,
   chopstickLength: 138,
   chopstickHandleGap: 30,
   chopstickHandleWidth: 10.8,
@@ -76,7 +75,6 @@ const state = {
   phase: "ready",
   score: 0,
   best: loadBestScore(),
-  lives: CONFIG.maxLives,
   timeLeft: CONFIG.durationSeconds,
   combo: 0,
   comboClock: 0,
@@ -126,17 +124,27 @@ function rand(min, max) {
 function getRamenAnchor() {
   const width = state.viewport.width;
   const height = state.viewport.height;
-  const tableTopY = height * 0.57;
+  const baseTableTopY = height * 0.57;
   const tableTopHeight = height * 0.12;
-  const bowlY = tableTopY + tableTopHeight * 0.56;
+  const bowlYOffset = tableTopHeight * 0.3;
+  const baseBowlY = baseTableTopY + bowlYOffset;
   const ramenWidth = RAMEN.bowlRadiusX * 2;
   const ramenHeight = RAMEN.bowlRadiusY * 2;
+  const tableBottomY = height - Math.max(20, height * 0.04);
+  const bowlBottomLimitY = height - Math.max(26, height * 0.05);
+  const bowlBottomExtent = 50;
+  const maxTableShift = Math.max(0, tableBottomY - (baseTableTopY + tableTopHeight));
+  const maxBowlShift = Math.max(0, bowlBottomLimitY - (baseBowlY + bowlBottomExtent));
+  const layoutShift = Math.min(maxTableShift, maxBowlShift) * 0.3;
+  const tableTopY = baseTableTopY + layoutShift;
+  const bowlY = baseBowlY + layoutShift;
 
   return {
     x: width * 0.5,
     y: bowlY,
     tableTopY,
     tableTopHeight,
+    tableBottomY,
     airCenterX: width * 0.5,
     airCenterY: bowlY - height * 0.2,
     airRadiusX: (ramenWidth * RAMEN.flyAirspaceScale) * 0.5,
@@ -195,7 +203,6 @@ function hideOverlay(overlay) {
 function resetStateForGame() {
   state.phase = "playing";
   state.score = 0;
-  state.lives = CONFIG.maxLives;
   state.timeLeft = CONFIG.durationSeconds;
   state.combo = 0;
   state.comboClock = 0;
@@ -479,13 +486,8 @@ function tryCatchFlies() {
 }
 
 function handleFlyEscape(x, y) {
-  state.lives -= 1;
-  state.combo = 0;
-  state.comboClock = 0;
-  emitBurst(x, y, "210,79,47", 20);
-  if (state.lives <= 0) {
-    endGame("The flies took over the kitchen.");
-  }
+  // Escaped flies no longer penalize or end the round.
+  emitBurst(x, y, "210,79,47", 12);
 }
 
 function updateFlies(dt) {
@@ -843,7 +845,8 @@ function drawBackdrop(width, height) {
   const ramen = getRamenAnchor();
   const counterTopY = ramen.tableTopY;
   const counterTopHeight = ramen.tableTopHeight;
-  const counterFrontHeight = height - counterTopY;
+  const counterFrontY = counterTopY + counterTopHeight;
+  const counterFrontHeight = Math.max(0, ramen.tableBottomY - counterFrontY);
 
   const topGradient = ctx.createLinearGradient(
     0,
@@ -865,7 +868,7 @@ function drawBackdrop(width, height) {
   frontGradient.addColorStop(0, "#a76b3d");
   frontGradient.addColorStop(1, "#744629");
   ctx.fillStyle = frontGradient;
-  ctx.fillRect(0, counterTopY + counterTopHeight, width, counterFrontHeight);
+  ctx.fillRect(0, counterFrontY, width, counterFrontHeight);
 
   const tableGlow = ctx.createRadialGradient(
     ramen.x,
@@ -881,7 +884,7 @@ function drawBackdrop(width, height) {
   ctx.fillRect(0, counterTopY, width, counterTopHeight);
 
   for (let i = 0; i < 22; i += 1) {
-    const y = counterTopY + counterTopHeight + i * (counterFrontHeight / 22);
+    const y = counterFrontY + i * (counterFrontHeight / 22);
     ctx.strokeStyle = "rgba(209,156,108," + (0.1 + i * 0.004) + ")";
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -1048,14 +1051,6 @@ function drawFlies() {
     ctx.ellipse(fly.size * 0.87, fly.size * 0.14, fly.size * 0.14, fly.size * 0.2, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    if (isGold) {
-      ctx.strokeStyle = "rgba(255,215,118,0.58)";
-      ctx.lineWidth = 1.3;
-      ctx.beginPath();
-      ctx.arc(0, 0, fly.size * 1.02 + Math.sin(state.elapsed * 8 + i) * 0.65, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-
     ctx.restore();
   }
 }
@@ -1164,27 +1159,6 @@ function drawChopsticks() {
 
   drawSingleChopstick(top.x1, top.y1, top.x2, top.y2);
   drawSingleChopstick(bottom.x1, bottom.y1, bottom.x2, bottom.y2);
-
-  const tipTone = state.tipGap <= CONFIG.tipCatchGapMax
-    ? "rgba(252,230,188,0.98)"
-    : "rgba(248,225,182,0.84)";
-  const tipRadius = state.tipGap <= CONFIG.tipCatchGapMax ? 1.65 : 1.45;
-
-  ctx.fillStyle = tipTone;
-  ctx.beginPath();
-  ctx.arc(top.x2, top.y2, tipRadius, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(bottom.x2, bottom.y2, tipRadius, 0, Math.PI * 2);
-  ctx.fill();
-
-  if (state.tipGap <= CONFIG.tipCatchGapMax) {
-    ctx.strokeStyle = "rgba(248,225,182,0.45)";
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.arc(pair.tipCenterX, pair.tipCenterY, CONFIG.tipCatchRadius + 3.5, 0, Math.PI * 2);
-    ctx.stroke();
-  }
 }
 
 function drawCaptureAura() {
@@ -1242,10 +1216,8 @@ function render() {
   drawTrail();
   drawFlies();
   drawParticles();
-  drawCaptureAura();
   drawChopsticks();
   drawScorePopups();
-  drawCursorHalo();
 }
 
 function setPointerFromEvent(event) {
