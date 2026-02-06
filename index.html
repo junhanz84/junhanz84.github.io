@@ -14,9 +14,8 @@
   </head>
   <body>
     <main class="game-shell">
-      <header class="hud">
-        <h1 class="title">Chopstick Ninja</h1>
-        <div class="hud-row">
+      <section class="arena-wrap">
+        <div class="hud-row hud-overlay">
           <div class="hud-card">
             <span class="label">Score</span>
             <span class="value" id="scoreValue">0</span>
@@ -30,21 +29,15 @@
             <span class="value" id="timeValue">60</span>
           </div>
           <div class="hud-card">
-            <span class="label">Lives</span>
-            <span class="value" id="livesValue">3</span>
-          </div>
-          <div class="hud-card">
             <span class="label">Combo</span>
             <span class="value" id="comboValue">x1</span>
           </div>
         </div>
-      </header>
 
-      <section class="arena-wrap">
         <canvas id="gameCanvas" aria-label="Chopstick Ninja game area"></canvas>
 
         <div class="overlay intro show" id="introOverlay">
-          <h2>Way of the Chopstick</h2>
+          <h2>Chopstick Ninja</h2>
           <p>
             Guard the ramen. Move the chopstick tips onto nearby flies. The
             tips auto-close to pinch catches when they touch.

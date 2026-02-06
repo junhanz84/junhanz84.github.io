@@ -6,7 +6,6 @@ const ctx = canvas.getContext("2d");
 const scoreValue = document.getElementById("scoreValue");
 const bestValue = document.getElementById("bestValue");
 const timeValue = document.getElementById("timeValue");
-const livesValue = document.getElementById("livesValue");
 const comboValue = document.getElementById("comboValue");
 
 const introOverlay = document.getElementById("introOverlay");
@@ -145,6 +144,15 @@ function getRamenAnchor() {
   };
 }
 
+function pickAirspaceTarget(ramen, inset = 0.95) {
+  const angle = rand(0, Math.PI * 2);
+  const radius = Math.sqrt(Math.random()) * inset;
+  return {
+    x: ramen.airCenterX + Math.cos(angle) * ramen.airRadiusX * radius,
+    y: ramen.airCenterY + Math.sin(angle) * ramen.airRadiusY * radius,
+  };
+}
+
 function resizeCanvas() {
   const rect = canvas.getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -173,7 +181,6 @@ function updateHud() {
   scoreValue.textContent = String(Math.floor(state.score));
   bestValue.textContent = String(Math.floor(state.best));
   timeValue.textContent = String(Math.max(0, Math.ceil(state.timeLeft)));
-  livesValue.textContent = String(Math.max(0, state.lives));
   comboValue.textContent = "x" + String(comboMultiplier);
 }
 
@@ -279,16 +286,14 @@ function spawnFly() {
     y = height + margin;
   }
 
-  const targetX = ramen.airCenterX + rand(-ramen.airRadiusX * 0.85, ramen.airRadiusX * 0.85);
-  const targetY = ramen.airCenterY + rand(-ramen.airRadiusY * 0.9, ramen.airRadiusY * 0.9);
+  const entryTarget = pickAirspaceTarget(ramen, 0.92);
+  const targetX = entryTarget.x;
+  const targetY = entryTarget.y;
   const toTargetX = targetX - x;
   const toTargetY = targetY - y;
   const toTargetLength = Math.hypot(toTargetX, toTargetY) || 1;
   const vx = (toTargetX / toTargetLength) * speed;
   const vy = (toTargetY / toTargetLength) * speed;
-
-  const orbitRadius = rand(ramen.airRadiusX * 0.32, ramen.airRadiusX * 0.96);
-  const orbitDirection = Math.random() < 0.5 ? 1 : -1;
 
   state.flies.push({
     x,
@@ -303,11 +308,11 @@ function spawnFly() {
     age: 0,
     wingSeed: rand(0, Math.PI * 2),
     wobbleSpeed: rand(4.5, 9.8),
-    orbitRadius,
-    orbitDirection,
-    orbitPhase: rand(0, Math.PI * 2),
     mode: "approach",
     hasEnteredScene: false,
+    roamTargetX: targetX,
+    roamTargetY: targetY,
+    retargetClock: rand(1.1, 2.2),
   });
 }
 
@@ -506,38 +511,60 @@ function updateFlies(dt) {
       fly.hasEnteredScene = true;
     }
 
-    const toCenterX = airCenterX - fly.x;
-    const toCenterY = airCenterY - fly.y;
-    const centerDistance = Math.hypot(toCenterX, toCenterY) || 1;
-
-    if (fly.mode === "approach" && centerDistance <= fly.orbitRadius * 0.72) {
-      fly.mode = "orbit";
-    }
-
     let desiredVX = fly.vx;
     let desiredVY = fly.vy;
 
     if (fly.mode === "approach") {
-      const dirX = toCenterX / centerDistance;
-      const dirY = toCenterY / centerDistance;
-      desiredVX = dirX * fly.baseSpeed + Math.sin(fly.age * 4.1 + fly.wingSeed) * 18;
-      desiredVY = dirY * fly.baseSpeed + Math.cos(fly.age * 3.8 + fly.wingSeed) * 18;
+      const toTargetX = fly.roamTargetX - fly.x;
+      const toTargetY = fly.roamTargetY - fly.y;
+      const targetDistance = Math.hypot(toTargetX, toTargetY) || 1;
+      const dirX = toTargetX / targetDistance;
+      const dirY = toTargetY / targetDistance;
+      desiredVX = dirX * (fly.baseSpeed * 1.02) + Math.sin(fly.age * 4.1 + fly.wingSeed) * 18;
+      desiredVY = dirY * (fly.baseSpeed * 1.02) + Math.cos(fly.age * 3.8 + fly.wingSeed) * 18;
+
+      if (targetDistance < 44) {
+        fly.mode = "roam";
+        const nextTarget = pickAirspaceTarget(ramen, 0.98);
+        fly.roamTargetX = nextTarget.x;
+        fly.roamTargetY = nextTarget.y;
+        fly.retargetClock = rand(1.1, 2.4);
+      }
     } else {
-      const centerDirX = toCenterX / centerDistance;
-      const centerDirY = toCenterY / centerDistance;
-      const tangentX = -centerDirY * fly.orbitDirection;
-      const tangentY = centerDirX * fly.orbitDirection;
-      const pulse = Math.sin(fly.age * 1.05 + fly.orbitPhase) * 0.18;
-      const targetRadius = fly.orbitRadius * (1 + pulse);
-      const radialError = centerDistance - targetRadius;
-      const orbitalSpeed =
-        fly.baseSpeed * (0.86 + Math.sin(fly.age * 1.6 + fly.orbitPhase) * 0.1);
+      fly.retargetClock -= dt;
+      let toTargetX = fly.roamTargetX - fly.x;
+      let toTargetY = fly.roamTargetY - fly.y;
+      let targetDistance = Math.hypot(toTargetX, toTargetY) || 1;
 
-      desiredVX = tangentX * orbitalSpeed - centerDirX * radialError * 2.1;
-      desiredVY = tangentY * (orbitalSpeed * 0.78) - centerDirY * radialError * 2.35;
+      if (targetDistance < 34 || fly.retargetClock <= 0) {
+        const nextTarget = pickAirspaceTarget(ramen, 0.98);
+        fly.roamTargetX = nextTarget.x;
+        fly.roamTargetY = nextTarget.y;
+        fly.retargetClock = rand(1.25, 2.8);
+        toTargetX = fly.roamTargetX - fly.x;
+        toTargetY = fly.roamTargetY - fly.y;
+        targetDistance = Math.hypot(toTargetX, toTargetY) || 1;
+      }
 
-      if (fly.y > ramen.y - fly.size * 0.5) {
-        desiredVY -= 120;
+      const dirX = toTargetX / targetDistance;
+      const dirY = toTargetY / targetDistance;
+      const cruiseSpeed = fly.baseSpeed * (0.74 + Math.sin(fly.age * 1.7 + fly.wingSeed) * 0.14);
+      desiredVX = dirX * cruiseSpeed + Math.sin(fly.age * 3.1 + fly.wingSeed * 1.7) * 22;
+      desiredVY = dirY * cruiseSpeed + Math.cos(fly.age * 2.8 + fly.wingSeed) * 14;
+
+      const dxCenter = fly.x - airCenterX;
+      const dyCenter = fly.y - airCenterY;
+      const ellipsePos =
+        (dxCenter * dxCenter) / (ramen.airRadiusX * ramen.airRadiusX) +
+        (dyCenter * dyCenter) / (ramen.airRadiusY * ramen.airRadiusY);
+      if (ellipsePos > 1) {
+        const centerDistance = Math.hypot(dxCenter, dyCenter) || 1;
+        desiredVX += (-dxCenter / centerDistance) * fly.baseSpeed * 0.85;
+        desiredVY += (-dyCenter / centerDistance) * fly.baseSpeed * 0.9;
+      }
+
+      if (fly.y > ramen.y - fly.size * 0.6) {
+        desiredVY -= 140;
       }
     }
 
@@ -552,29 +579,30 @@ function updateFlies(dt) {
       const dx = fly.x - other.x;
       const dy = fly.y - other.y;
       const distance = Math.hypot(dx, dy) || 1;
-      if (distance < 44) {
-        const repel = ((44 - distance) / 44) * 160;
+      if (distance < 62) {
+        const repel = ((62 - distance) / 62) * 210;
         separationX += (dx / distance) * repel;
-        separationY += (dy / distance) * repel * 0.86;
+        separationY += (dy / distance) * repel * 0.9;
       }
     }
 
     desiredVX += separationX;
     desiredVY += separationY;
 
-    const steering = clamp(dt * (fly.mode === "approach" ? 2.4 : 3.15), 0, 1);
+    const steering = clamp(dt * (fly.mode === "approach" ? 2.35 : 2.9), 0, 1);
     fly.vx += (desiredVX - fly.vx) * steering;
     fly.vy += (desiredVY - fly.vy) * steering;
 
-    const wobble = Math.sin(fly.age * fly.wobbleSpeed + fly.wingSeed) * (fly.mode === "approach" ? 6 : 8);
+    const wobble =
+      Math.sin(fly.age * fly.wobbleSpeed + fly.wingSeed) * (fly.mode === "approach" ? 6 : 7);
     const speed = Math.hypot(fly.vx, fly.vy) || 1;
     const normalX = -fly.vy / speed;
     const normalY = fly.vx / speed;
     fly.x += (fly.vx + normalX * wobble) * dt;
     fly.y += (fly.vy + normalY * wobble) * dt;
 
-    fly.vx += rand(-6, 6) * dt;
-    fly.vy += rand(-6, 6) * dt;
+    fly.vx += rand(-5, 5) * dt;
+    fly.vy += rand(-5, 5) * dt;
 
     const nextSpeed = Math.hypot(fly.vx, fly.vy) || 1;
     const minSpeed = fly.baseSpeed * 0.62;

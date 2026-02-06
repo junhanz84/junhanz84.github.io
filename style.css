@@ -48,33 +48,27 @@ body::before {
 }
 
 .game-shell {
-  width: min(1120px, calc(100vw - 2.4rem));
-  margin: 1.2rem auto;
+  width: min(1180px, 100vw);
+  margin: 0 auto;
+  padding: 0 0.6rem 0.7rem;
   animation: shell-rise 0.75s ease-out both;
-}
-
-.hud {
-  margin-bottom: 0.85rem;
-}
-
-.title {
-  margin: 0;
-  line-height: 1;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  font-size: clamp(2.2rem, 6vw, 4.4rem);
-  font-family: "Teko", sans-serif;
-  text-shadow:
-    0 0 12px rgba(255, 165, 112, 0.65),
-    0 0 36px rgba(227, 111, 63, 0.36);
-  animation: title-draw 0.85s ease-out 0.15s both;
 }
 
 .hud-row {
   display: grid;
-  margin-top: 0.55rem;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin: 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.6rem;
+}
+
+.hud-overlay {
+  position: absolute;
+  top: 0.92rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(920px, calc(100% - 1.2rem));
+  z-index: 8;
+  pointer-events: none;
 }
 
 .hud-card {
@@ -103,10 +97,6 @@ body::before {
 
 .hud-card:nth-child(4) {
   animation-delay: 0.33s;
-}
-
-.hud-card:nth-child(5) {
-  animation-delay: 0.4s;
 }
 
 .label {
@@ -139,8 +129,8 @@ body::before {
 #gameCanvas {
   display: block;
   width: 100%;
-  height: min(72vh, 720px);
-  min-height: 420px;
+  height: min(94vh, 860px);
+  min-height: 460px;
   touch-action: none;
   cursor: none;
 }
@@ -161,6 +151,7 @@ body::before {
     inset 0 1px 0 rgba(255, 244, 219, 0.26);
   pointer-events: none;
   opacity: 0;
+  z-index: 20;
   transition:
     opacity 0.28s ease,
     transform 0.28s ease;
@@ -221,21 +212,26 @@ button:active {
 
 @media (max-width: 900px) {
   .game-shell {
-    width: calc(100vw - 1.2rem);
-    margin: 0.6rem auto;
+    width: 100vw;
+    padding: 0 0.45rem 0.45rem;
   }
 
   .hud-row {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   #gameCanvas {
     min-height: 420px;
-    height: 68vh;
+    height: 89vh;
   }
 }
 
 @media (max-width: 620px) {
+  .hud-overlay {
+    top: 0.7rem;
+    width: calc(100% - 0.9rem);
+  }
+
   .hud-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -250,6 +246,7 @@ button:active {
 
   #gameCanvas {
     min-height: 360px;
+    height: 88vh;
   }
 }
 
@@ -261,19 +258,6 @@ button:active {
   to {
     transform: translateY(0);
     opacity: 1;
-  }
-}
-
-@keyframes title-draw {
-  from {
-    letter-spacing: 0.26em;
-    opacity: 0;
-    transform: translateX(-18px);
-  }
-  to {
-    letter-spacing: 0.1em;
-    opacity: 1;
-    transform: translateX(0);
   }
 }
 
