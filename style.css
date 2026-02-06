@@ -1,0 +1,289 @@
+:root {
+  --ink: #f6edd4;
+  --paper: #d8c9a3;
+  --ember: #d24f2f;
+  --ember-dark: #8f2c1e;
+  --night: #11100c;
+  --shadow: #060503;
+  --jade: #5f8770;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: "Shippori Mincho", Georgia, serif;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 18% 15%, rgba(210, 79, 47, 0.24), transparent 34%),
+    radial-gradient(circle at 78% 80%, rgba(95, 135, 112, 0.22), transparent 36%),
+    linear-gradient(165deg, #1a1813, #0d0b08 60%, #050403);
+  overflow: hidden;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.22;
+  background-image:
+    repeating-linear-gradient(
+      95deg,
+      transparent 0 26px,
+      rgba(216, 201, 163, 0.06) 26px 28px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 34px,
+      rgba(210, 79, 47, 0.05) 34px 35px
+    );
+}
+
+.game-shell {
+  width: min(1120px, calc(100vw - 2.4rem));
+  margin: 1.2rem auto;
+  animation: shell-rise 0.75s ease-out both;
+}
+
+.hud {
+  margin-bottom: 0.85rem;
+}
+
+.title {
+  margin: 0;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: clamp(2.2rem, 6vw, 4.4rem);
+  font-family: "Teko", sans-serif;
+  text-shadow:
+    0 0 12px rgba(210, 79, 47, 0.45),
+    0 0 36px rgba(210, 79, 47, 0.2);
+  animation: title-draw 0.85s ease-out 0.15s both;
+}
+
+.hud-row {
+  display: grid;
+  margin-top: 0.55rem;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.hud-card {
+  background: linear-gradient(145deg, rgba(19, 15, 12, 0.85), rgba(7, 6, 5, 0.82));
+  border: 1px solid rgba(216, 201, 163, 0.28);
+  border-radius: 10px;
+  padding: 0.42rem 0.7rem 0.36rem;
+  backdrop-filter: blur(1.5px);
+  box-shadow:
+    inset 0 1px 0 rgba(246, 237, 212, 0.1),
+    0 12px 20px rgba(0, 0, 0, 0.25);
+  animation: card-rise 0.5s ease both;
+}
+
+.hud-card:nth-child(1) {
+  animation-delay: 0.12s;
+}
+
+.hud-card:nth-child(2) {
+  animation-delay: 0.19s;
+}
+
+.hud-card:nth-child(3) {
+  animation-delay: 0.26s;
+}
+
+.hud-card:nth-child(4) {
+  animation-delay: 0.33s;
+}
+
+.hud-card:nth-child(5) {
+  animation-delay: 0.4s;
+}
+
+.label {
+  display: block;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: rgba(246, 237, 212, 0.78);
+}
+
+.value {
+  display: block;
+  margin-top: -0.1rem;
+  font-size: 1.45rem;
+  font-family: "Teko", sans-serif;
+  letter-spacing: 0.06em;
+}
+
+.arena-wrap {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(216, 201, 163, 0.32);
+  background: linear-gradient(185deg, rgba(15, 12, 10, 0.74), rgba(2, 2, 2, 0.8));
+  box-shadow:
+    0 24px 50px rgba(0, 0, 0, 0.44),
+    inset 0 1px 0 rgba(246, 237, 212, 0.1);
+}
+
+#gameCanvas {
+  display: block;
+  width: 100%;
+  height: min(72vh, 720px);
+  min-height: 420px;
+  touch-action: none;
+  cursor: none;
+}
+
+.overlay {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(560px, calc(100% - 2rem));
+  transform: translate(-50%, -50%) scale(0.95);
+  text-align: center;
+  border: 1px solid rgba(216, 201, 163, 0.34);
+  border-radius: 14px;
+  padding: 1.35rem 1.25rem;
+  background: linear-gradient(170deg, rgba(13, 11, 8, 0.9), rgba(31, 19, 14, 0.86));
+  box-shadow:
+    0 20px 35px rgba(0, 0, 0, 0.44),
+    inset 0 1px 0 rgba(246, 237, 212, 0.12);
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    opacity 0.28s ease,
+    transform 0.28s ease;
+}
+
+.overlay.show {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  pointer-events: auto;
+}
+
+.overlay h2 {
+  margin: 0 0 0.35rem;
+  font-family: "Teko", sans-serif;
+  letter-spacing: 0.08em;
+  font-size: clamp(1.9rem, 5vw, 2.7rem);
+  text-transform: uppercase;
+}
+
+.overlay p {
+  margin: 0 auto 1rem;
+  max-width: 34ch;
+  line-height: 1.5;
+  color: rgba(246, 237, 212, 0.85);
+}
+
+button {
+  border: 0;
+  border-radius: 10px;
+  padding: 0.78rem 1.35rem 0.72rem;
+  font-family: "Teko", sans-serif;
+  font-size: 1.25rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #fff7e2;
+  background: linear-gradient(160deg, var(--ember), var(--ember-dark));
+  box-shadow:
+    0 10px 22px rgba(210, 79, 47, 0.36),
+    inset 0 1px 0 rgba(255, 245, 224, 0.25);
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    filter 0.18s ease;
+}
+
+button:hover {
+  transform: translateY(-2px);
+  filter: saturate(1.06);
+  box-shadow:
+    0 14px 24px rgba(210, 79, 47, 0.44),
+    inset 0 1px 0 rgba(255, 245, 224, 0.27);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 900px) {
+  .game-shell {
+    width: calc(100vw - 1.2rem);
+    margin: 0.6rem auto;
+  }
+
+  .hud-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  #gameCanvas {
+    min-height: 420px;
+    height: 68vh;
+  }
+}
+
+@media (max-width: 620px) {
+  .hud-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hud-card {
+    padding: 0.36rem 0.6rem 0.28rem;
+  }
+
+  .value {
+    font-size: 1.2rem;
+  }
+
+  #gameCanvas {
+    min-height: 360px;
+  }
+}
+
+@keyframes shell-rise {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes title-draw {
+  from {
+    letter-spacing: 0.26em;
+    opacity: 0;
+    transform: translateX(-18px);
+  }
+  to {
+    letter-spacing: 0.1em;
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes card-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

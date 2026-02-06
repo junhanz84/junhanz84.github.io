@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chopstick Ninja</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Teko:wght@400;500;600;700&family=Shippori+Mincho:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="game-shell">
+      <header class="hud">
+        <h1 class="title">Chopstick Ninja</h1>
+        <div class="hud-row">
+          <div class="hud-card">
+            <span class="label">Score</span>
+            <span class="value" id="scoreValue">0</span>
+          </div>
+          <div class="hud-card">
+            <span class="label">Best</span>
+            <span class="value" id="bestValue">0</span>
+          </div>
+          <div class="hud-card">
+            <span class="label">Time</span>
+            <span class="value" id="timeValue">60</span>
+          </div>
+          <div class="hud-card">
+            <span class="label">Lives</span>
+            <span class="value" id="livesValue">3</span>
+          </div>
+          <div class="hud-card">
+            <span class="label">Combo</span>
+            <span class="value" id="comboValue">x1</span>
+          </div>
+        </div>
+      </header>
+
+      <section class="arena-wrap">
+        <canvas id="gameCanvas" aria-label="Chopstick Ninja game area"></canvas>
+
+        <div class="overlay intro show" id="introOverlay">
+          <h2>Way of the Chopstick</h2>
+          <p>
+            Move the chopstick tips to a fly. When a fly is close, the tips
+            auto-close and pinch together. Catch it when the closed tips touch.
+          </p>
+          <button id="startButton" type="button">Start Hunt</button>
+        </div>
+
+        <div class="overlay game-over" id="gameOverOverlay">
+          <h2>Round Complete</h2>
+          <p id="finalMessage">Your dojo awaits the next hunt.</p>
+          <button id="restartButton" type="button">Play Again</button>
+        </div>
+      </section>
+    </main>
+
+    <script src="game.js"></script>
+  </body>
+</html>
